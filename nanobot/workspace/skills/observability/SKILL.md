@@ -28,28 +28,67 @@ You have access to observability tools that can query VictoriaLogs and VictoriaT
   - Returns complete span hierarchy with errors highlighted
   - Use after finding a trace_id from logs_search or traces_list
 
-## Workflow
+## Investigation Flow for "What went wrong?" or "Check system health"
 
-### When asked about errors:
+When the user asks about errors, failures, or system health, follow this exact flow:
 
-1. **Start with `logs_error_count`** to see if there are recent errors and which services are affected
-2. **Use `logs_search`** to find specific error logs for the affected service
-   - Extract `trace_id` from error logs if present
-3. **Use `traces_get`** to investigate the full request flow if you found a trace_id
-4. **Summarize findings** — don't dump raw JSON
+### Step 1: Check error count (fresh window)
+Start with `logs_error_count` using a **fresh, narrow time window** (last 10-15 minutes):
+```
+logs_error_count(service="Learning Management Service", hours=0.25)
+```
+This tells you which services have recent errors.
 
-### When asked about a specific request:
+### Step 2: Search error logs for the affected service
+Use `logs_search` to find specific error logs:
+```
+logs_search(query='service.name:"Learning Management Service" severity:ERROR', limit=20)
+```
+Look for:
+- Error messages (exception.message, db.statement)
+- `trace_id` fields in the log entries
 
-1. **Use `logs_search`** with the trace_id or time range
-2. **Use `traces_get`** to see the full span hierarchy
-3. **Identify bottlenecks** — look for spans with long durations
-4. **Check for errors** — look for `error: true` tags or exception logs
+### Step 3: Fetch the matching trace
+If you found a `trace_id` in the logs, use `traces_get`:
+```
+traces_get(trace_id="<trace_id_from_logs>")
+```
+This shows the full request flow and where it failed.
 
-### When asked about system health:
+### Step 4: Summarize findings (combine log + trace evidence)
+Write a **single coherent investigation** that includes:
+- **What the logs show**: error messages, affected service, timestamp
+- **What the trace shows**: failing operation, duration, root cause
+- **The discrepancy (if any)**: e.g., "Logs show PostgreSQL connection failure, but HTTP response was 404 instead of 500"
 
-1. **Check error count** — `logs_error_count` for the last hour
-2. **Check recent traces** — `traces_list` to see status distribution
-3. **Summarize** — "X errors in the last hour, mostly from service Y"
+## Response Guidelines
+
+### For "What went wrong?" investigations:
+
+Your response MUST include:
+1. **Log evidence**: Quote at least one error message from logs
+2. **Trace evidence**: Name the failing operation from the trace
+3. **Affected service**: Explicitly name the service (e.g., "Learning Management Service")
+4. **Root cause**: Explain what actually failed (e.g., "PostgreSQL hostname resolution failed")
+5. **Discrepancy (if applicable)**: Note any mismatch between actual error and reported status
+
+### Example good response:
+> "I found 5 errors in the Learning Management Service in the last 10 minutes.
+>
+> **Log evidence**: Errors show 'socket.gaierror: [Errno -2] Name or service not known' when trying to connect to PostgreSQL at host 'postgres:5432'.
+>
+> **Trace evidence**: Trace `2e282ae8e5702832657ffbec701963cf` shows the `connect` span failed after 197ms with `error: true`. The root operation was a SQLAlchemy connection attempt.
+>
+> **Discrepancy**: The backend returned HTTP 404 'Items not found', but the real issue is PostgreSQL being unavailable (connection failure, not missing data). This is a misreported error — should be 503 Service Unavailable.
+>
+> **Root cause**: PostgreSQL service is down or unreachable."
+
+### For general health checks:
+
+> "System health check for the last hour:
+> - Learning Management Service: 0 errors
+> - All traces show status 'ok'
+> - No issues detected."
 
 ## Query Examples
 
@@ -60,7 +99,7 @@ logs_error_count(service="Learning Management Service", hours=0.17)
 
 ### Search for specific error pattern:
 ```
-logs_search(query='service.name:"Learning Management Service" severity:ERROR', limit=50)
+logs_search(query='service.name:"Learning Management Service" severity:ERROR', limit=50, start_time="2026-03-30T15:00:00Z")
 ```
 
 ### Find traces with errors:
@@ -70,16 +109,18 @@ traces_list(service="Learning Management Service", limit=20)
 traces_get(trace_id="<trace_id_from_list>")
 ```
 
-## Response Guidelines
+## Common Error Patterns
 
-- **Be concise** — summarize findings, don't dump raw JSON
-- **Highlight errors** — if found, explain what went wrong
-- **Include trace_id** — when referencing specific requests
-- **Time context** — mention the time window you searched
-- **Actionable** — if you find errors, suggest what might be wrong
+| Error message | Likely cause |
+|--------------|--------------|
+| `Name or service not known` | Service discovery failure (target service down) |
+| `Connection refused` | Service running but port not accessible |
+| `Connection timeout` | Network issue or overloaded service |
+| `db_query failed` | Database connection or query error |
 
-### Good response example:
-> "Found 3 errors in the Learning Management Service in the last 10 minutes. All errors are 'Name or service not known' when connecting to PostgreSQL. This suggests the database service was unavailable. Trace ID: 2e282ae8e5702832657ffbec701963cf shows the connection failed after 197ms."
+## What NOT to do
 
-### Bad response example:
-> [Dumps entire JSON response from logs_search without any summary]
+- ❌ Don't dump raw JSON responses
+- ❌ Don't skip the trace investigation if trace_id is available
+- ❌ Don't report old errors (use fresh time windows)
+- ❌ Don't give generic answers without citing specific log/trace evidence
