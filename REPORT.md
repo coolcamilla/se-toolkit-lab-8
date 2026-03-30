@@ -154,17 +154,27 @@ nanobot-1  | 2026-03-30 15:05:29.105 | INFO     | nanobot.agent.loop:run:280 - A
 ## Task 2B — Web client
 
 <!-- Screenshot of a conversation with the agent in the Flutter web app -->
-![alt text](image.png)
-![alt text](image-1.png)
-![alt text](image-2.png)
+![alt text](sreenshotes/image.png)
+![alt text](sreenshotes/image-1.png)
+![alt text](sreenshotes/image-2.png)
 
 ## Task 3A — Structured logging
 
 <!-- Paste happy-path and error-path log excerpts, VictoriaLogs query screenshot -->
 
+backend-1  | 2026-03-30 15:26:39,930 INFO [httpx] [_client.py:1740] [trace_id=c238e3e92b32f766d1b1b075fd28d1e6 span_id=72adb02d67e920c9 resource.service.name=Learning Management Service trace_sampled=True] - HTTP Request: GET https://auche.namaz.live/api/logs?limit=500&since=2026-03-21T15%3A30%3A32.373603 "HTTP/1.1 200 OK"
+
+backend-1  | INFO:     172.18.0.9:44614 - "GET /items/ HTTP/1.1" 404
+backend-1  | INFO:     172.18.0.9:44614 - "GET /items/ HTTP/1.1" 404 Not Found
+
+![alt text](sreenshotes/image-3.png)
+
 ## Task 3B — Traces
 
 <!-- Screenshots: healthy trace span hierarchy, error trace -->
+
+![alt text](sreenshotes/image-4.png)
+![alt text](sreenshotes/image-6.png)
 
 ## Task 3C — Observability MCP tools
 
