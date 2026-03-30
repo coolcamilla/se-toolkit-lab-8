@@ -55,6 +55,27 @@ def main():
             nanobot_lms_api_key
         )
 
+    # Enable webchat channel from env vars
+    if nanobot_webchat_host := os.environ.get("NANOBOT_WEBCHAT_CONTAINER_ADDRESS"):
+        config["channels"]["webchat"]["host"] = nanobot_webchat_host
+
+    if nanobot_webchat_port := os.environ.get("NANOBOT_WEBCHAT_CONTAINER_PORT"):
+        config["channels"]["webchat"]["port"] = int(nanobot_webchat_port)
+
+    # Configure mcp_webchat MCP server for structured UI messages
+    config["tools"]["mcpServers"]["webchat"] = {
+        "command": "/app/.venv/bin/python",
+        "args": ["-m", "mcp_webchat"],
+        "env": {
+            "NANOBOT_WEBCHAT_UI_RELAY_URL": os.environ.get(
+                "NANOBOT_WEBCHAT_UI_RELAY_URL", "ws://localhost:8080/ws/chat"
+            ),
+            "NANOBOT_WEBCHAT_UI_RELAY_TOKEN": os.environ.get(
+                "NANOBOT_ACCESS_KEY", ""
+            ),
+        },
+    }
+
     # Write resolved config
     with open(resolved_path, "w") as f:
         json.dump(config, f, indent=2)
