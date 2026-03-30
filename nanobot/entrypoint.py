@@ -14,8 +14,13 @@ import sys
 def main():
     # Paths
     config_path = "/app/nanobot/config.json"
-    resolved_path = "/app/nanobot/config.resolved.json"
+    # Write resolved config to /tmp to avoid permission issues when
+    # container runs as host user but image files are owned by appuser
+    resolved_path = "/tmp/nanobot/config.resolved.json"
     workspace = "/app/nanobot/workspace"
+
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(resolved_path), exist_ok=True)
 
     # Read base config
     with open(config_path, "r") as f:
