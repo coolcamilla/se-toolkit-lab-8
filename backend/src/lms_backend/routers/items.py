@@ -3,7 +3,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from lms_backend.database import get_session
@@ -19,14 +19,33 @@ async def get_items(session: AsyncSession = Depends(get_session)):
     """Get all items."""
     try:
         return await read_items(session)
-    except Exception as exc:
-        logger.warning(
-            "items_list_failed_as_not_found",
-            extra={"event": "items_list_failed_as_not_found"},
+    except OperationalError as exc:
+        # Database connection failure — return 503, not 404
+        logger.error(
+            "database_unavailable",
+            extra={
+                "event": "database_unavailable",
+                "error": str(exc),
+                "error_type": type(exc).__name__,
+            },
         )
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Items not found",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database service unavailable",
+        ) from exc
+    except Exception as exc:
+        # Other unexpected errors — return 500
+        logger.error(
+            "internal_server_error",
+            extra={
+                "event": "internal_server_error",
+                "error": str(exc),
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
         ) from exc
 
 
