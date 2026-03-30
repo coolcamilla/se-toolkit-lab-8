@@ -154,6 +154,9 @@ nanobot-1  | 2026-03-30 15:05:29.105 | INFO     | nanobot.agent.loop:run:280 - A
 ## Task 2B — Web client
 
 <!-- Screenshot of a conversation with the agent in the Flutter web app -->
+![alt text](image.png)
+![alt text](image-1.png)
+![alt text](image-2.png)
 
 ## Task 3A — Structured logging
 
