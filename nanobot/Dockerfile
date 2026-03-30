@@ -26,6 +26,11 @@ COPY --from=workspace pyproject.toml uv.lock /app/
 # Copy mcp-lms source (required for editable install)
 COPY --from=workspace mcp/mcp-lms /app/mcp/mcp-lms
 
+# Copy nanobot-websocket-channel packages (required for webchat)
+COPY --from=workspace nanobot-websocket-channel/nanobot-channel-protocol /app/nanobot-websocket-channel/nanobot-channel-protocol
+COPY --from=workspace nanobot-websocket-channel/nanobot-webchat /app/nanobot-websocket-channel/nanobot-webchat
+COPY --from=workspace nanobot-websocket-channel/mcp-webchat /app/nanobot-websocket-channel/mcp-webchat
+
 # Copy nanobot package files
 COPY pyproject.toml /app/nanobot/pyproject.toml
 
